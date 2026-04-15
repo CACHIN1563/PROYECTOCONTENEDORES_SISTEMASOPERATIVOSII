@@ -120,17 +120,32 @@ function renderPOIs(data) {
         li.style.borderLeftColor = color;
         li.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                <div onclick="map.setView([${poi.lat}, ${${poi.lng}}], 16); marker.openPopup();" style="flex:1;">
+                <div class="poi-click-area" style="flex:1; cursor:pointer;">
                     <div class="poi-item-name">${poi.name}</div>
                     <div class="poi-item-desc">${poi.description || '<em style="color:#555;">Sin descripción</em>'}</div>
                 </div>
-                <button class="btn btn-danger" style="width:auto; padding:4px 6px; margin-left:8px;" onclick="event.stopPropagation(); deletePoint(${poi.id})">✕</button>
+                <button class="btn btn-danger btn-del" style="width:auto; padding:4px 8px; margin-left:8px;">✕</button>
             </div>
-            <div class="poi-item-footer" onclick="map.setView([${poi.lat}, ${${poi.lng}}], 16); marker.openPopup();">
+            <div class="poi-item-footer poi-click-area" style="cursor:pointer;">
                 <span class="tag" style="background:${color}22;color:${color};border:1px solid ${color}44;">${poi.category}</span>
                 <span class="poi-coords">${parseFloat(poi.lat).toFixed(4)}, ${parseFloat(poi.lng).toFixed(4)}</span>
             </div>
         `;
+
+        // Asignar eventos de forma limpia (evita errores de sintaxis en el HTML)
+        const clickAreas = li.querySelectorAll('.poi-click-area');
+        clickAreas.forEach(area => {
+            area.onclick = () => {
+                map.setView([poi.lat, poi.lng], 16);
+                marker.openPopup();
+            };
+        });
+
+        li.querySelector('.btn-del').onclick = (e) => {
+            e.stopPropagation();
+            deletePoint(poi.id);
+        };
+
         document.getElementById('poi-list').appendChild(li);
     });
 }
