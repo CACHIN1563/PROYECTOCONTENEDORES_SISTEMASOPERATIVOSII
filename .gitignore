@@ -1,0 +1,16 @@
+# Docker
+.env
+pg_data/
+
+# Node.js
+node_modules/
+npm-debug.log
+.npm
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Otros
+*.log

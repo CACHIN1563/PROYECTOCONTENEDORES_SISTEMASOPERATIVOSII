@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoPoints SO2 — Registro de Puntos de Interés</title>
+    <meta name="description" content="Sistema de registro y consulta de puntos de interés geoespaciales con base de datos espacial. Proyecto Sistemas Operativos 2.">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg-dark:     #0f1117;
+            --bg-panel:    #1a1d27;
+            --bg-card:     #22263a;
+            --bg-input:    #2a2f45;
+            --border:      #343853;
+            --accent:      #4f8ef7;
+            --accent-glow: rgba(79,142,247,0.25);
+            --success:     #34d399;
+            --danger:      #f87171;
+            --warning:     #fbbf24;
+            --text-main:   #e2e8f0;
+            --text-muted:  #8892a4;
+            --radius-sm:   6px;
+            --radius-md:   10px;
+            --transition:  0.2s ease;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ── Header ── */
+        header {
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+        .logo { font-size: 1.4rem; }
+        header h1 { font-size: 1rem; font-weight: 600; color: var(--text-main); }
+        header span { font-size: 0.8rem; color: var(--text-muted); margin-left: 8px; font-weight: 400; }
+        .header-badge {
+            margin-left: auto;
+            background: var(--accent-glow);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 20px;
+            letter-spacing: 0.05em;
+        }
+
+        /* ── Layout ── */
+        .main-container { display: flex; flex: 1; overflow: hidden; }
+        #map { flex: 1; }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: 360px;
+            background: var(--bg-panel);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .sidebar-scroll { overflow-y: auto; flex: 1; padding: 16px; }
+        .sidebar-scroll::-webkit-scrollbar { width: 6px; }
+        .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+        .sidebar-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        /* ── Section headers ── */
+        .section-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        .section-block { margin-bottom: 24px; }
+
+        /* ── Forms ── */
+        .form-group { margin-bottom: 10px; }
+        label { display: block; font-size: 0.78rem; font-weight: 500; color: var(--text-muted); margin-bottom: 4px; }
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 8px 10px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-main);
+            font-size: 0.85rem;
+            font-family: inherit;
+            transition: border-color var(--transition), box-shadow var(--transition);
+            outline: none;
+        }
+        input:focus, select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        input[readonly] { color: var(--text-muted); cursor: default; }
+        .coords-row { display: flex; gap: 8px; }
+        .coords-row input { flex: 1; }
+
+        /* ── Buttons ── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+            padding: 9px 14px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: #6ea3ff; box-shadow: 0 0 12px var(--accent-glow); }
+        .btn-secondary { background: var(--bg-input); color: var(--text-muted); border: 1px solid var(--border); }
+        .btn-secondary:hover { color: var(--text-main); border-color: var(--text-muted); }
+        .btn-danger { background: rgba(248,113,113,0.15); color: var(--danger); border: 1px solid rgba(248,113,113,0.3); }
+        .btn-danger:hover { background: rgba(248,113,113,0.25); }
+        .btn-row { display: flex; gap: 8px; }
+        .btn-row .btn { flex: 1; }
+
+        /* ── Info tip ── */
+        .tip {
+            font-size: 0.78rem;
+            color: var(--warning);
+            background: rgba(251,191,36,0.08);
+            border: 1px solid rgba(251,191,36,0.2);
+            border-radius: var(--radius-sm);
+            padding: 7px 10px;
+            margin-bottom: 12px;
+        }
+
+        /* ── POI List ── */
+        .poi-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+        .poi-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: all var(--transition);
+            border-left: 3px solid var(--accent);
+        }
+        .poi-item:hover { border-color: var(--accent); background: #272b42; transform: translateX(2px); }
+        .poi-item-name { font-weight: 600; font-size: 0.9rem; color: var(--text-main); margin-bottom: 4px; }
+        .poi-item-desc { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 6px; }
+        .poi-item-footer { display: flex; justify-content: space-between; align-items: center; }
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+        }
+        .poi-coords { font-size: 0.7rem; color: var(--text-muted); }
+        .empty-list { text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.85rem; }
+
+        /* ── Count badge ── */
+        .count-badge {
+            display: inline-block;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 1px 8px;
+            border-radius: 20px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        /* ── Toast Notification ── */
+        #toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 12px 18px;
+            border-radius: var(--radius-md);
+            font-size: 0.85rem;
+            font-weight: 600;
+            z-index: 9999;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            max-width: 300px;
+        }
+        #toast.show { opacity: 1; transform: translateY(0); }
+        #toast.success { background: #064e3b; border: 1px solid var(--success); color: var(--success); }
+        #toast.error   { background: #450a0a; border: 1px solid var(--danger);  color: var(--danger);  }
+        #toast.info    { background: #1e3a5f; border: 1px solid var(--accent);  color: var(--accent);  }
+
+        /* ── Radius search active state ── */
+        .radius-active-banner {
+            background: rgba(79,142,247,0.1);
+            border: 1px solid var(--accent);
+            border-radius: var(--radius-sm);
+            padding: 6px 10px;
+            font-size: 0.78rem;
+            color: var(--accent);
+            margin-bottom: 10px;
+            display: none;
+        }
+        .radius-active-banner.visible { display: block; }
+
+        /* ── Divider ── */
+        .divider { border: none; border-top: 1px solid var(--border); margin: 4px 0 16px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <span class="logo">🗺️</span>
+    <h1>GeoPoints <span>— Sistema de Puntos de Interés</span></h1>
+    <div class="header-badge">SO2 · PostGIS</div>
+</header>
+
+<div class="main-container">
+    <div id="map"></div>
+
+    <div class="sidebar">
+        <div class="sidebar-scroll">
+
+            <!-- ══ SECCIÓN: AGREGAR PUNTO ══ -->
+            <div class="section-block">
+                <div class="section-title">📍 Agregar Nuevo Punto</div>
+                <div class="tip">Haz clic en el mapa para capturar las coordenadas.</div>
+                <div class="form-group">
+                    <label>Coordenadas (Lat / Lng)</label>
+                    <div class="coords-row">
+                        <input type="text" id="lat" readonly placeholder="Latitud">
+                        <input type="text" id="lng" readonly placeholder="Longitud">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Nombre del Lugar *</label>
+                    <input type="text" id="name" placeholder="Ej. Monumento Central">
+                </div>
+                <div class="form-group">
+                    <label>Descripción</label>
+                    <input type="text" id="desc" placeholder="Breve descripción del lugar">
+                </div>
+                <div class="form-group">
+                    <label>Categoría *</label>
+                    <select id="cat">
+                        <option value="Cultural">🏛️ Cultural</option>
+                        <option value="Gastronomía">🍽️ Gastronomía</option>
+                        <option value="Servicio">🔧 Servicio</option>
+                        <option value="Naturaleza">🌿 Naturaleza</option>
+                        <option value="Comercial">🛒 Comercial</option>
+                        <option value="Arqueología">🏺 Arqueología</option>
+                        <option value="Transporte">🚌 Transporte</option>
+                        <option value="Religión">⛪ Religión</option>
+                        <option value="Entretenimiento">🎭 Entretenimiento</option>
+                        <option value="Emergencia">🚨 Emergencia</option>
+                        <option value="Otro">📌 Otro</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" id="btn-save" onclick="savePoint()">＋ Guardar Punto</button>
+            </div>
+
+            <hr class="divider">
+
+            <!-- ══ SECCIÓN: BUSCAR POR RADIO ══ -->
+            <div class="section-block">
+                <div class="section-title">🔍 Buscar por Proximidad</div>
+                <div class="tip">Haz clic en el mapa para definir el centro de búsqueda.</div>
+                <div class="form-group">
+                    <label>Centro de Búsqueda (Lat / Lng)</label>
+                    <div class="coords-row">
+                        <input type="text" id="search-lat" readonly placeholder="Latitud">
+                        <input type="text" id="search-lng" readonly placeholder="Longitud">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Radio de búsqueda (km)</label>
+                    <input type="number" id="radius-km" value="2" min="0.1" max="100" step="0.1">
+                </div>
+                <div class="btn-row">
+                    <button class="btn btn-primary" onclick="searchByRadius()">🔍 Buscar</button>
+                    <button class="btn btn-danger" onclick="clearRadiusSearch()">✕ Limpiar</button>
+                </div>
+                <div class="radius-active-banner" id="radius-banner">
+                    📡 Mostrando puntos en radio activo
+                </div>
+            </div>
+
+            <hr class="divider">
+
+            <!-- ══ SECCIÓN: LISTA DE PUNTOS ══ -->
+            <div class="section-block">
+                <div class="section-title">
+                    📋 Puntos Registrados
+                    <span class="count-badge" id="poi-count">0</span>
+                </div>
+                <div class="form-group">
+                    <label>Filtrar por Categoría</label>
+                    <select id="filter-cat" onchange="loadPoints()">
+                        <option value="">— Ver Todos —</option>
+                        <option value="Cultural">🏛️ Cultural</option>
+                        <option value="Gastronomía">🍽️ Gastronomía</option>
+                        <option value="Servicio">🔧 Servicio</option>
+                        <option value="Naturaleza">🌿 Naturaleza</option>
+                        <option value="Comercial">🛒 Comercial</option>
+                        <option value="Arqueología">🏺 Arqueología</option>
+                        <option value="Transporte">🚌 Transporte</option>
+                        <option value="Religión">⛪ Religión</option>
+                        <option value="Entretenimiento">🎭 Entretenimiento</option>
+                        <option value="Emergencia">🚨 Emergencia</option>
+                        <option value="Otro">📌 Otro</option>
+                    </select>
+                </div>
+                <ul class="poi-list" id="poi-list"></ul>
+            </div>
+
+        </div><!-- /sidebar-scroll -->
+    </div><!-- /sidebar -->
+</div><!-- /main-container -->
+
+<div id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="app.js"></script>
+</body>
+</html>

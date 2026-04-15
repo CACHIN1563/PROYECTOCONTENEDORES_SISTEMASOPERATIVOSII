@@ -1,0 +1,62 @@
+services:
+  db:
+    image: postgis/postgis:15-3.3
+    container_name: so2_db
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - geo_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: so2_api
+    environment:
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_NAME=${POSTGRES_DB}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - PORT=${API_PORT}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - geo_network
+    restart: unless-stopped
+
+  proxy:
+    image: nginx:alpine
+    container_name: so2_proxy
+    ports:
+      - "${PROXY_PORT}:80"
+    volumes:
+      - ./proxy/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./proxy/html:/usr/share/nginx/html
+    depends_on:
+      - api
+    networks:
+      - geo_network
+    restart: unless-stopped
+
+volumes:
+  pg_data:
+    name: geo_db_data
+
+networks:
+  geo_network:
+    name: geo_network_custom
+    driver: bridge
