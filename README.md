@@ -1,6 +1,8 @@
 # Sistema de Registro de Puntos de Interés Geoespacial
 ### Proyecto 2 — Sistemas Operativos 2
 
+**Repositorio del Proyecto:** [GitHub - PROYECTOCONTENEDORES_SISTEMASOPERATIVOSII](https://github.com/CACHIN1563/PROYECTOCONTENEDORES_SISTEMASOPERATIVOSII.git)
+
 Aplicación web basada en microservicios contenerizados para registrar, visualizar, filtrar y consultar puntos de interés utilizando datos geoespaciales reales. Todo el sistema corre localmente con Docker Compose, sin necesidad de servicios externos.
 
 ---
@@ -58,7 +60,7 @@ Aplicación web basada en microservicios contenerizados para registrar, visualiz
 ### 1. Clonar / descargar el proyecto
 
 ```bash
-git clone <url-del-repositorio>
+git clone https://github.com/CACHIN1563/PROYECTOCONTENEDORES_SISTEMASOPERATIVOSII.git
 cd "Proyecto 2 Sistemas"
 ```
 
